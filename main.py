@@ -1,15 +1,11 @@
+from corporationwiki import CorporSearch
 from PyQt5.QtCore import QSize
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets
 import qtawesome as qta
 from PyQt5 import uic
 import qdarkstyle
 import sys
 import os
-import threading
-from worker import do_crawl_corpor
-
-
-from corporationwiki import CorporSearch
 
 qtCreatorFile = os.path.join(os.path.dirname(__file__), 'src', 'main.ui')
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
@@ -27,6 +23,7 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         self.make_connections()
         self.corpChkBox.setChecked(True)
         self.t1 = None
+        self.pause_handler = None
         self._setProgress(0)
         
     def _set_icon(self, widget: QtWidgets.QWidget, icon_name: str, text: str = None):
@@ -83,12 +80,12 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
 
             if self.checkboxStatus == "corporationwiki" :
                 print(self.logTextEdit)
-                self.t1 = threading.Thread(target=do_crawl_corpor, args=(searchKey, self.addLogMessage, ))
-                self.t1.start()            
+                self.t1 = self.do_crawl_corpor(searchKey)
+                # self.t1.start()
             elif self.checkboxStatus == "truepeoplesearch" :
                 # TruepeopleSearch(searchKey)
                 print("print")
-        
+        self._set_icon(self.togStatePushBtn, 'mdi.stop', 'Stop')
         # self._setProgress(50)
 
     def _reset_task(self):
@@ -96,24 +93,41 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         print('{text} Button Clicked'.format(text=sender.text()))
         self._set_icon(self.togStatePushBtn, 'mdi.play', 'Play')
         self._setProgress(0)
+        if self.t1:
+            self.t1.driver.quit()
+            self.t1.driver = None
+            self.t1 = None
 
     def _toggle_task(self):
         sender = self.sender()
 
-        if self.t1:
-            self.t1.join()
-
         print('{text} Button Clicked'.format(text=sender.text()))
 
         if sender.text() == 'Play':
+            if self.t1:
+                # Resuming Task
+                print('Resuming Task')
+                self.t1.paused = False
             self._set_icon(sender, 'mdi.stop', 'Stop')
         elif sender.text() == 'Stop':
             self._set_icon(sender, 'mdi.play', 'Play')
-            self._setProgress(100)
+            if self.t1:
+                # Pausing Task
+                print('Pausing Task')
+                self.t1.paused = True
+            # self._setProgress(100)
 
     def _setProgress(self, percent: int):
         self.progressBar.setValue(percent)
 
+    def do_crawl_corpor(self, keyword):
+        print("param name: {}".format(keyword))
+        print("param log callback: {}".format(self.addLogMessage))
+
+        corporSearch = CorporSearch(keyword)
+        corporSearch.logcallback.connect(self.addLogMessage)
+        corporSearch.start()
+        return corporSearch
         
     def make_connections(self):
         # Check Boxes

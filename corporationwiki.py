@@ -1,46 +1,59 @@
-import selenium
-from selenium import webdriver
-from selenium.webdriver import Chrome
-from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver import Chrome
+from selenium import webdriver
 from lxml import html
-import csv
-import time
+import selenium
 import random
+import time
 import json
+import csv
 import os
 
 
-class CorporSearch:
-
+class CorporSearch(QThread):
     dirName = 'corporationwiki'
+    logcallback = pyqtSignal(object)
+    mutex = QMutex()
+
     try:
         os.mkdir(dirName)
         print("Directory ", dirName, " Created ")
     except FileExistsError:
         print("Directory ", dirName, " already exists ")
 
-    def __init__(self, keyword, logcallback):
+    def __init__(self, keyword):
+        QThread.__init__(self)
         self.keyword = keyword
-        self.logcallback = logcallback
-        self.logcallback("#Now making csv file...........................")
+        # self.logcallback = logcallback
+        self.paused = False
+
+    def _check_task_paused(self):
+        while self.paused:
+            print('Sleeping')
+            self.sleep(1)
+
+    def _intialize(self):
+        self.logcallback.emit("#Now making csv file...........................")
         # Qtcore
 
         open(self.dirName + "/" + "{}.csv".format(self.keyword), "wb").close()
-        header = ["Company Name", "Name", "Role", "Address", "Age", "Filling Type", "Status", "State", "Foreign State", "County", "State ID", "Date Filed", "DOS Process"]
+        header = ["Company Name", "Name", "Role", "Address", "Age", "Filling Type", "Status", "State", "Foreign State",
+                  "County", "State ID", "Date Filed", "DOS Process"]
 
         with open(self.dirName + "/" + "{}.csv".format(self.keyword), "a", newline="") as f:
             csv_writer = csv.DictWriter(f, fieldnames=header, lineterminator='\n')
             csv_writer.writeheader()
-        
-        
+
         print("start selenium script")
-        
-        self.logcallback("#Open chrome browser open now.....")
-        
+
+        self.logcallback.emit("#Open chrome browser open now.....")
+
         self.path = "driver\\chromedriver.exe"
         self.driver = Chrome(executable_path=self.path)
         self.driver.get("https://www.corporationwiki.com/")
@@ -49,6 +62,11 @@ class CorporSearch:
         # self.parse_page(keyword)
 
     def parse_page(self):
+        self._intialize()
+        # Checking task is paused or not
+        self._check_task_paused()
+        time.sleep(5)
+        self.logcallback.emit('Doing Some')
         print("---------------------------------")
         driver = self.driver
         # keyword = "premier metro realty corp"
@@ -58,12 +76,16 @@ class CorporSearch:
         searchKeyword = driver.find_element_by_id("keywords")
         searchKeyword.send_keys(self.keyword)
         searchKeyword.send_keys(Keys.ENTER)
-        self.logcallback("#Input key word... and search....")
+        # Checking task is paused or not
+        self._check_task_paused()
+        self.logcallback.emit("#Input key word... and search....")
         time.sleep(5)
 
         companyName_xpaths = driver.find_elements_by_xpath("//div[@class='list-group-item']//a[@class='ellipsis']")
         
         for companyName_xpath in companyName_xpaths:
+            # Checking task is paused or not
+            self._check_task_paused()
             companyName = companyName_xpath.text
             item_url = companyName_xpath.get_attribute("href")
             
@@ -76,8 +98,10 @@ class CorporSearch:
         print(companyNames, item_urls)
 
         for companyName, item_url in zip(companyNames, item_urls):
+            # Checking task is paused or not
+            self._check_task_paused()
     
-        # companyName = ""
+            # companyName = ""
             name = ""
             role = ""
             address = ""
@@ -101,6 +125,8 @@ class CorporSearch:
             print("------------------------------------------------------------------------------")
 
             for i in range(0, 9):
+                # Checking task is paused or not
+                self._check_task_paused()
                 if str(i) in name:
                     name = name.replace(str(i), "")
             
@@ -114,8 +140,11 @@ class CorporSearch:
 
                 background_url = driver.find_element_by_xpath("//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
                 print("BackgroundUrl-------------------> : ", background_url)
-                
+                # Checking task is paused or not
+                self._check_task_paused()
                 driver.get(background_url)
+                # Checking task is paused or not
+                self._check_task_paused()
                 time.sleep(4)
 
                 age = driver.find_element_by_class_name("display-age").text
@@ -126,6 +155,8 @@ class CorporSearch:
                 info_xpaths = driver.find_elements_by_xpath("(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//td")
 
                 for label_xpath, info_xpath in zip(label_xpaths, info_xpaths):
+                    # Checking task is paused or not
+                    self._check_task_paused()
                     labelTxt = label_xpath.text
                     infoTxt = info_xpath.text
 
@@ -148,8 +179,11 @@ class CorporSearch:
 
                 background_url = driver.find_element_by_xpath("//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
                 print("BackgroundUrl-------------------> : ", background_url)
-                
+                # Checking task is paused or not
+                self._check_task_paused()
                 driver.get(background_url)
+                # Checking task is paused or not
+                self._check_task_paused()
                 time.sleep(4)
 
                 age = driver.find_element_by_class_name("display-age").text
@@ -175,4 +209,14 @@ class CorporSearch:
                 print("DOS Process-------------------> : ", dos_process)
 
                 writer.writerow([companyName, name, role, address, age, filling_type, status, state, foreign_state, county, state_id, date_filed, dos_process])
-        
+
+    def run(self):
+        try:
+            self.parse_page()
+        except Exception as e:
+            if self.driver is not None:
+                raise e
+        # try:
+        #     self.parse_page()
+        # except:
+        #     pass
