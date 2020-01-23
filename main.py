@@ -204,19 +204,15 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
                 self.t3.paused = True
 
     def _exit_task(self):
-        if self.t1:
-            self.t1.driver.quit()
-            self.t1.driver = None
-            self.t1 = None
-
-        elif self.t2:
-            self.t2.driver.quit()
-            self.t2.driver = None
-            self.t2.driver1.quit()
-            self.t2.driver1 = None
-            self.t2.driver2.quit()
-            self.t2.driver2 = None
-            self.t2 = None
+        # (Change to fix close crash)
+        self.logTextEdit.append('_____________________Closing (Please Wait...)')
+        t = Thread(target=self._reset)
+        t.setDaemon(True)
+        t.start()
+        from PyQt5.QtCore import QCoreApplication
+        while t.is_alive():
+            QCoreApplication.processEvents()
+        exit(0)
 
     def _setProgress(self, percent: int):
         self.progressBar.setValue(percent)
@@ -252,8 +248,8 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         self.resetPushBtn.clicked.connect(self._reset_task)
         self.searchPushBtn.clicked.connect(self._start_task)
         self.togStatePushBtn.clicked.connect(self._toggle_task)
-        # Close Button
-        self.buttonBox.clicked.connect(self._exit_task)
+        # Close Button (Change to fix close crash)
+        self.closePushBtn.clicked.connect(self._exit_task)
 
     def addLogMessage(self, message, status):
         self.logTextEdit.append(message)
@@ -266,4 +262,5 @@ if __name__ == "__main__":
     window = LeadGenerator()
     window.setWindowTitle('Lead Generator')
     window.show()
-    sys.exit(app.exec_())
+    # (Change to fix close crash)
+    app.exec_()
