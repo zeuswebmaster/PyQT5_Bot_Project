@@ -1,24 +1,21 @@
+from corpor_truepeople import Copor_TrueSearch
+from truepeoplesearh import TruepeopleSearch
+from corporationwiki import CorporSearch
 from PyQt5.QtCore import QSize
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets
 import qtawesome as qta
 from PyQt5 import uic
 import qdarkstyle
 import sys
 import os
-import threading
-from worker import do_crawl_corpor
 
-
-from corporationwiki import CorporSearch
-
-qtCreatorFile = os.path.join(os.path.dirname(__file__), 'src', 'main.ui')
+qtCreatorFile = os.path.join(os.getcwd(), 'src', 'main.ui')
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
 
 class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
     checkboxStatus = ""
-    status = 0
-
+    
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
         Ui_MainWindow.__init__(self)
@@ -26,9 +23,20 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         self._setup_icons()
         self.make_connections()
         self.corpChkBox.setChecked(True)
-        self.t1 = None
+        self.t1 = None    # CorporationWiki Search
+        self.t2 = None    # Truepoeple Search
+        self.t3 = None    # Corporation -> Truepeople Search
+
+        self.pause_handler = None
         self._setProgress(0)
-        
+
+        self.setStyleSheet(
+            "QLabel#label {font: bold 20px;}"
+            "QGroupBox {font: bold 14px;}"
+            "QCheckBox {font: 12px;}"
+            "QTextEdit#logTextEdit {font: 15px;}"
+        )
+
     def _set_icon(self, widget: QtWidgets.QWidget, icon_name: str, text: str = None):
         widget.setIcon(qta.icon(icon_name, color='white'))
         self.searchPushBtn.setIconSize(QSize(20, 20))
@@ -43,7 +51,7 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
     def _handle_chk_box(self, state: bool):
         if state:
             _widgets_by_option = {
-                'truepeoplesearch': [
+                'Truepeoplesearch.com': [
                     self.nameLabel,
                     self.nameLineEdit,
                     self.adrLabel,
@@ -59,7 +67,7 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
             text = sender.text()
             self.checkboxStatus = text
             print(text, 'Selected')
-            _enabled_option = text if text == 'truepeoplesearch' else 'Otherwise'
+            _enabled_option = text if text == 'Truepeoplesearch.com' else 'Otherwise'
             for option, widgets in _widgets_by_option.items():
                 for widget in widgets:
                     if option == _enabled_option:
@@ -72,24 +80,36 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         sender = self.sender()
         print('{text} Button Clicked'.format(text=sender.text()))
         
-        #Get Search Key
+        # Corporationwiki
         searchKey = self.keyLineEdit.text()
-
-        if searchKey == "" :
-            QtWidgets.QMessageBox.about(self, "Warning", "Please insert Search Key")
-
-        else:
-            self._set_icon(self.togStatePushBtn, 'mdi.stop', 'Stop')
-
-            if self.checkboxStatus == "corporationwiki" :
-                print(self.logTextEdit)
-                self.t1 = threading.Thread(target=do_crawl_corpor, args=(searchKey, self.addLogMessage, ))
-                self.t1.start()            
-            elif self.checkboxStatus == "truepeoplesearch" :
-                # TruepeopleSearch(searchKey)
-                print("print")
+        #TruepeopleSearch
+        searchName = self.nameLineEdit.text()
+        searchAddress = self.adrLineEdit.text()
         
-        # self._setProgress(50)
+        self._set_icon(self.togStatePushBtn, 'mdi.stop', 'Stop')
+
+        if self.checkboxStatus == "Corporationwiki.com" :
+            if searchKey == "":
+                QtWidgets.QMessageBox.about(self, "Warning", "Please insert Search Key")
+            else:
+                print(self.logTextEdit)
+                self.t1 = self.do_crawl_corpor(searchKey)
+            
+        elif self.checkboxStatus == "Truepeoplesearch.com" :
+            if searchKey == "" and (searchName == "" and searchAddress == ""):
+                QtWidgets.QMessageBox.about(self, "Warning", "Please insert `Name` and `Address`")
+            else:
+                print(searchName, searchAddress)
+                self.t2 = self.do_crawl_truepeople(searchName, searchAddress)
+
+        elif self.checkboxStatus == "Corporationwiki → Truepeoplesearch" :
+            if searchKey == "":
+                QtWidgets.QMessageBox.about(self, "Warning", "Please insert `Search Key`")
+            else:
+                self.t3 = self.do_crawl_corpor_true(searchKey)
+
+        self._set_icon(self.togStatePushBtn, 'mdi.stop', 'Stop')
+        
 
     def _reset_task(self):
         sender = self.sender()
@@ -97,23 +117,119 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         self._set_icon(self.togStatePushBtn, 'mdi.play', 'Play')
         self._setProgress(0)
 
-    def _toggle_task(self):
-        sender = self.sender()
+        if self.checkboxStatus == "Corporationwiki.com" or self.checkboxStatus == "Corporationwiki → Truepeoplesearch":
+            self.keyLineEdit.setText(None)
+        
+        elif self.checkboxStatus == "Truepeoplesearch.com" :
+            self.nameLineEdit.setText(None)
+            self.adrLineEdit.setText(None)
 
         if self.t1:
-            self.t1.join()
+            self.t1.driver.close()
+            self.t1.driver.quit()
+            self.t1.driver = None
+            
+            self.t1 = None
+        
+        elif self.t2:
+            self.t2.driver.close()
+            self.t2.driver.quit()
+            self.t2.driver = None
 
+            self.t2.driver1.close()
+            self.t2.driver1.quit()
+            self.t2.driver1 = None
+
+            self.t2.driver2.close()
+            self.t2.driver2.quit()
+            self.t2.driver2 = None
+
+            self.t2 = None
+        
+        elif self.t3:
+            self.t3.driver.close()
+            self.t3.driver.quit()
+            self.t3.driver = None
+
+            self.t3.driver1.close()
+            self.t3.driver1.quit()
+            self.t3.driver1 = None
+
+            self.t3.driver2.close()
+            self.t3.driver2.quit()
+            self.t3.driver2 = None
+
+            self.t3.driver3.close()
+            self.t3.driver3.quit()
+            self.t3.driver3 = None
+
+            self.t3 = None
+
+
+    def _toggle_task(self):
+        sender = self.sender()
         print('{text} Button Clicked'.format(text=sender.text()))
 
         if sender.text() == 'Play':
+            if self.t1:
+                # Resuming Task
+                self.logTextEdit.append('_____________________Resuming Task')
+                self.t1.paused = False
+            elif self.t2:
+                self.logTextEdit.append('_____________________Resuming Task')
+                self.t2.paused = False
+
             self._set_icon(sender, 'mdi.stop', 'Stop')
+
         elif sender.text() == 'Stop':
             self._set_icon(sender, 'mdi.play', 'Play')
-            self._setProgress(100)
+            if self.t1:
+                # Pausing Task
+                self.logTextEdit.append('_____________________Pausing Task')
+                self.t1.paused = True
+            elif self.t2:
+                self.logTextEdit.append('_____________________Pausing Task')
+                self.t2.paused = True
 
+    def _exit_task(self):
+        if self.t1:
+            self.t1.driver.quit()
+            self.t1.driver = None
+            self.t1 = None
+
+        elif self.t2:
+            self.t2.driver.quit()
+            self.t2.driver = None
+            self.t2.driver1.quit()
+            self.t2.driver1 = None
+            self.t2.driver2.quit()
+            self.t2.driver2 = None
+            self.t2 = None
+        
     def _setProgress(self, percent: int):
         self.progressBar.setValue(percent)
 
+    def do_crawl_corpor(self, keyword):
+        # print("param name: {}".format(keyword))
+        # print("param log callback: {}".format(self.addLogMessage))
+        corporSearch = CorporSearch(keyword)
+        corporSearch.logcallback.connect(self.addLogMessage)
+        corporSearch.start()
+        return corporSearch
+
+    def do_crawl_truepeople(self, keyName, keyAddress):
+        # print("param name: {}".format(keyName), "param address: {}".format(keyAddress))
+        # print("param log callback: {}".format(self.addLogMessage))
+        truepeopleSearch = TruepeopleSearch(keyName, keyAddress)
+        truepeopleSearch.logcallback.connect(self.addLogMessage)
+        truepeopleSearch.start()
+        return truepeopleSearch
+
+    def do_crawl_corpor_true(self, keyword):
+        corpor_trueSearch = Copor_TrueSearch(keyword)
+        corpor_trueSearch.logcallback.connect(self.addLogMessage)
+        corpor_trueSearch.start()
+        return corpor_trueSearch
         
     def make_connections(self):
         # Check Boxes
@@ -124,25 +240,13 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         self.resetPushBtn.clicked.connect(self._reset_task)
         self.searchPushBtn.clicked.connect(self._start_task)
         self.togStatePushBtn.clicked.connect(self._toggle_task)
+        # Close Button
+        self.buttonBox.clicked.connect(self._exit_task)
 
-        # Search Key
-        # self.keyLineEdit.textChanged.connect(self._search_key)
-
-    def addLogMessage(self, message):
+    def addLogMessage(self, message, status):
         self.logTextEdit.append(message)
-        print(self.status)
-
-    
-        self.status = self.status + 1
-        self._setProgress(self.status)
-        # self.emit(QtCore.SIGNAL("VALUE"), self.status)
-        # self.connect(do_crawl_corpor, QtCore.SIGNAL("VALUE"), self._setProgress)
-
-
-
-
-
-
+        self._setProgress(status)
+        
 
 if __name__ == "__main__":
 
