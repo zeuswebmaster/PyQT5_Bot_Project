@@ -1,6 +1,7 @@
 from corpor_truepeople import Copor_TrueSearch
 from truepeoplesearh import TruepeopleSearch
 from corporationwiki import CorporSearch
+from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QSize
 from threading import Thread
 from PyQt5 import QtWidgets
@@ -8,6 +9,7 @@ import qtawesome as qta
 from PyQt5 import uic
 import qdarkstyle
 import sys
+import csv
 import os
 
 qtCreatorFile = os.path.join(os.getcwd(), 'src', 'main.ui')
@@ -75,7 +77,7 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
                         widget.show()
                     else:
                         widget.hide()
-            self.resize(self.width(), self.minimumHeight())
+            # self.resize(self.width(), self.minimumHeight())
 
     def _start_task(self):
         sender = self.sender()
@@ -265,6 +267,26 @@ class LeadGenerator(QtWidgets.QDialog, Ui_MainWindow):
         # Close Button
         # self.buttonBox.clicked.connect(self._exit_task)
         self.closePushBtn.clicked.connect(self._exit_task)
+        # CSV Buttons
+        self.browsePushBtn.clicked.connect(self.input_csv)
+
+    def input_csv(self):
+        path = QFileDialog.getOpenFileName(self, 'Provide CSV file', filter='*.csv')
+        if path:
+            self.csvLineEdit.setText(path[0])
+
+    def read_csv(self) -> list:
+        """
+        This method reads the csv based on the path from the csvLineEdit and outptuts csv as list of lists
+        :return:
+        """
+        path = self.csvLineEdit.text()
+        if os.path.exists(path):
+            with open(path, 'r') as r:
+                reader = csv.reader()
+                return [row for row in reader]
+        else:
+            QtWidgets.QMessageBox.about(self, "Warning", "Please provide a valid csv file")
 
     def addLogMessage(self, message, status):
         self.logTextEdit.append(message)
