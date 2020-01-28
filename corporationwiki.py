@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver import Chrome
+# from pyvirtualdisplay import Display
 from selenium import webdriver
 from lxml import html
 import selenium
@@ -56,7 +57,18 @@ class CorporSearch(QThread):
 
         self.logcallback.emit("#Open chrome browser open now.....", 4)
 
+        # display = Display(visible=0, size=(800, 600))
+        # display.start()
+
+        # options = webdriver.ChromeOptions()
+        # options.add_argument('user-agent=USERAGENTHERE')
+        # options.add_argument('--no-sandbox')
+        # options.add_argument('--headless')
+        # options.add_argument("--window-size=1600,900")
+
         self.path = "driver\\chromedriver.exe"
+
+        # self.driver = Chrome(executable_path=self.path, options=options)
         self.driver = Chrome(executable_path=self.path)
         self.driver.get("https://www.corporationwiki.com/")
         self.driver.maximize_window()
@@ -74,7 +86,7 @@ class CorporSearch(QThread):
         # keyword = "premier metro realty corp"
         item_urls = []
         companyNames = []
-            
+
         searchKeyword = driver.find_element_by_id("keywords")
         searchKeyword.send_keys(self.keyword)
         searchKeyword.send_keys(Keys.ENTER)
@@ -88,13 +100,13 @@ class CorporSearch(QThread):
         all_counts = len(companyName_xpaths)
         self.step_plus = (100 - self.progress_bar) / 6
         self.logcallback.emit("Search Results---------------> : {}".format(all_counts), self.progress_bar)
-        
+
         for companyName_xpath in companyName_xpaths:
             # Checking task is paused or not
             self._check_task_paused()
             companyName = companyName_xpath.text
             item_url = companyName_xpath.get_attribute("href")
-            
+
             companyNames.append(companyName)
             item_urls.append(item_url)
 
@@ -106,7 +118,7 @@ class CorporSearch(QThread):
         for companyName, item_url in zip(companyNames, item_urls):
             # Checking task is paused or not
             self._check_task_paused()
-    
+
             # companyName = ""
             name = ""
             role = ""
@@ -120,7 +132,6 @@ class CorporSearch(QThread):
             state_id = ""
             date_filed = ""
             dos_process = ""
-
 
             driver.get(item_url)
             self.progress_bar = self.progress_bar + self.step_plus
@@ -137,7 +148,7 @@ class CorporSearch(QThread):
                 self._check_task_paused()
                 if str(i) in name:
                     name = name.replace(str(i), "")
-            
+
             try:
                 streetAddress = driver.find_element_by_xpath("//span[@itemprop='streetAddress']").text
                 locality = driver.find_element_by_xpath("//span[@itemprop='addressLocality']").text
@@ -146,22 +157,25 @@ class CorporSearch(QThread):
 
                 address = streetAddress + " " + locality + " " + region + " " + postalCode
 
-                background_url = driver.find_element_by_xpath("//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
+                background_url = driver.find_element_by_xpath(
+                    "//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
                 print("BackgroundUrl-------------------> : ", background_url)
                 # Checking task is paused or not
                 self._check_task_paused()
                 driver.get(background_url)
-                
+
                 # Checking task is paused or not
                 self._check_task_paused()
                 time.sleep(4)
 
                 age = driver.find_element_by_class_name("display-age").text
             except:
-                
-                label_xpaths = driver.find_elements_by_xpath("(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//th")
 
-                info_xpaths = driver.find_elements_by_xpath("(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//td")
+                label_xpaths = driver.find_elements_by_xpath(
+                    "(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//th")
+
+                info_xpaths = driver.find_elements_by_xpath(
+                    "(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//td")
 
                 for label_xpath, info_xpath in zip(label_xpaths, info_xpaths):
                     # Checking task is paused or not
@@ -171,7 +185,7 @@ class CorporSearch(QThread):
 
                     if "Filing Type" in labelTxt:
                         filling_type = infoTxt
-                    elif "Status" in  labelTxt:
+                    elif "Status" in labelTxt:
                         status = infoTxt
                     elif "State" in labelTxt and "ID" not in labelTxt and "Foreign" not in labelTxt:
                         state = infoTxt
@@ -188,7 +202,8 @@ class CorporSearch(QThread):
 
                 address = county + " " + state + " " + state_id
 
-                background_url = driver.find_element_by_xpath("//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
+                background_url = driver.find_element_by_xpath(
+                    "//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
                 print("BackgroundUrl-------------------> : ", background_url)
                 self.progress_bar = self.progress_bar + self.step_plus
                 self.logcallback.emit("Background checking...", self.progress_bar)
@@ -202,7 +217,7 @@ class CorporSearch(QThread):
                 time.sleep(4)
 
                 age = driver.find_element_by_class_name("display-age").text
-            
+
             self.progress_bar = self.progress_bar + self.step_plus
             self.logcallback.emit("Input Data into CSV file...", self.progress_bar)
 
@@ -225,12 +240,13 @@ class CorporSearch(QThread):
                 print("Date Filed--------------------> : ", date_filed)
                 print("DOS Process-------------------> : ", dos_process)
 
-                writer.writerow([companyName, name, role, address, age, filling_type, status, state, foreign_state, county, state_id, date_filed, dos_process])
+                writer.writerow(
+                    [companyName, name, role, address, age, filling_type, status, state, foreign_state, county,
+                     state_id, date_filed, dos_process])
             self.progress_bar = self.progress_bar + self.step_plus
             self.logcallback.emit("**************************", self.progress_bar)
 
         self.logcallback.emit("**********************************End**************************************", 100)
-         
 
     def run(self):
         try:
@@ -240,6 +256,6 @@ class CorporSearch(QThread):
             self.driver.quit()
 
         except Exception as e:
-            if self.driver is not None:
-                raise e
-        
+            pass
+            # if self.driver is not None:
+            #     raise e

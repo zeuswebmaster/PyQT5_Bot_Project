@@ -18,6 +18,7 @@ import os
 
 from captcha_solver import CaptchaSolver
 
+
 class Copor_TrueSearch(QThread):
     solver = CaptchaSolver()
 
@@ -46,26 +47,27 @@ class Copor_TrueSearch(QThread):
             print('Sleeping')
             self.sleep(1)
 
-
     def _intialize(self):
         self.logcallback.emit("#Now making csv file...........................", 2)
         # Qtcore
 
         open(self.dirName + "/" + "{}.csv".format(self.keyword), "wb").close()
-        header = ["Company Name", "Name", "Role", "Address", "Age", "Filling Type", "Status", "State", "Foreign State", "County", "State ID", "Date Filed", "DOS Process", "Phone1", "phone2", "phone3", "phone4", "phone5", "phone6", "phone7", "phone8", "phone9", "phone10", "email1", "email2", "email3", "email4", "email5", "email6", "email7", "email8", "email9", "email10"]
+        header = ["Company Name", "Name", "Role", "Address", "Age", "Filling Type", "Status", "State", "Foreign State",
+                  "County", "State ID", "Date Filed", "DOS Process", "Phone1", "phone2", "phone3", "phone4", "phone5",
+                  "phone6", "phone7", "phone8", "phone9", "phone10", "email1", "email2", "email3", "email4", "email5",
+                  "email6", "email7", "email8", "email9", "email10"]
 
         with open(self.dirName + "/" + "{}.csv".format(self.keyword), "a", newline="") as f:
             csv_writer = csv.DictWriter(f, fieldnames=header, lineterminator='\n')
             csv_writer.writeheader()
 
-        
         self.logcallback.emit("#Open chrome browser open now.....", 4)
         self.path = "driver\\chromedriver.exe"
         self.driver = Chrome(executable_path=self.path)
-        
+
         self.logcallback.emit("### Open Chrome Browser2 now.............", 6)
         self.driver1 = Chrome(executable_path=self.path)
-        
+
         self.logcallback.emit("### Open Chrome Browser3 now.............", 8)
         self.driver2 = Chrome(executable_path=self.path)
 
@@ -83,7 +85,7 @@ class Copor_TrueSearch(QThread):
         companyNames = []
 
         self._intialize()
-        
+
         self._check_task_paused()
         time.sleep(5)
         self.logcallback.emit("### First Page Scraping Start.................", 10)
@@ -92,7 +94,6 @@ class Copor_TrueSearch(QThread):
         driver1 = self.driver1
         driver2 = self.driver2
         driver3 = self.driver3
-
 
         searchKeyword = driver.find_element_by_id("keywords")
         searchKeyword.send_keys(self.keyword)
@@ -113,7 +114,7 @@ class Copor_TrueSearch(QThread):
             self._check_task_paused()
             companyName = companyName_xpath.text
             item_url = companyName_xpath.get_attribute("href")
-            
+
             companyNames.append(companyName)
             item_urls.append(item_url)
 
@@ -139,19 +140,19 @@ class Copor_TrueSearch(QThread):
             dos_process = ""
 
             self.data = {
-                "company_name" : "",
-                "name" : "",
-                "role" : "",
-                "address" : "",
-                "age" : "",
-                "filling_type" : "",
-                "status" : "",
-                "state" :  "",
-                "foreign_state" : "",
-                "county" : "",
-                "state_id" : "",
-                "date_filed" : "",
-                "dos_process" : ""    
+                "company_name": "",
+                "name": "",
+                "role": "",
+                "address": "",
+                "age": "",
+                "filling_type": "",
+                "status": "",
+                "state": "",
+                "foreign_state": "",
+                "county": "",
+                "state_id": "",
+                "date_filed": "",
+                "dos_process": ""
             }
 
             driver.get(item_url)
@@ -169,7 +170,7 @@ class Copor_TrueSearch(QThread):
                 self._check_task_paused()
                 if str(i) in name:
                     name = name.replace(str(i), "")
-            
+
             try:
                 streetAddress = driver.find_element_by_xpath("//span[@itemprop='streetAddress']").text
                 locality = driver.find_element_by_xpath("//span[@itemprop='addressLocality']").text
@@ -178,22 +179,25 @@ class Copor_TrueSearch(QThread):
 
                 address = streetAddress + " " + locality + " " + region + " " + postalCode
 
-                background_url = driver.find_element_by_xpath("//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
+                background_url = driver.find_element_by_xpath(
+                    "//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
                 print("BackgroundUrl-------------------> : ", background_url)
                 # Checking task is paused or not
                 self._check_task_paused()
                 driver.get(background_url)
-                
+
                 # Checking task is paused or not
                 self._check_task_paused()
                 time.sleep(4)
 
                 age = driver.find_element_by_class_name("display-age").text
             except:
-                
-                label_xpaths = driver.find_elements_by_xpath("(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//th")
 
-                info_xpaths = driver.find_elements_by_xpath("(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//td")
+                label_xpaths = driver.find_elements_by_xpath(
+                    "(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//th")
+
+                info_xpaths = driver.find_elements_by_xpath(
+                    "(//table[contains(@class, 'table') and contains(@class, 'table-striped') and contains(@class, 'pad-bottom')])[1]/tbody//tr//td")
 
                 for label_xpath, info_xpath in zip(label_xpaths, info_xpaths):
                     # Checking task is paused or not
@@ -203,7 +207,7 @@ class Copor_TrueSearch(QThread):
 
                     if "Filing Type" in labelTxt:
                         filling_type = infoTxt
-                    elif "Status" in  labelTxt:
+                    elif "Status" in labelTxt:
                         status = infoTxt
                     elif "State" in labelTxt and "ID" not in labelTxt and "Foreign" not in labelTxt:
                         state = infoTxt
@@ -220,7 +224,8 @@ class Copor_TrueSearch(QThread):
 
                 address = county + " " + state + " " + state_id
 
-                background_url = driver.find_element_by_xpath("//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
+                background_url = driver.find_element_by_xpath(
+                    "//table[@class='list-table']//tbody//tr[1]/td[1]/div/a").get_attribute("href")
                 print("BackgroundUrl-------------------> : ", background_url)
                 self.progress_bar = self.progress_bar + self.step_plus
                 self.logcallback.emit("Background checking...", self.progress_bar)
@@ -234,7 +239,7 @@ class Copor_TrueSearch(QThread):
                 time.sleep(4)
 
                 age = driver.find_element_by_class_name("display-age").text
-            
+
             self.progress_bar = self.progress_bar + self.step_plus
 
             self.data["company_name"] = companyName
@@ -252,7 +257,7 @@ class Copor_TrueSearch(QThread):
             self.data["dos_process"] = dos_process
 
             self.turepeopleSearch(driver1, driver2, driver3, self.data)
-    
+
     def turepeopleSearch(self, driver1, driver2, driver3, data):
         url = self.default_url.format(data["name"], data["address"])
         driver1.get(url)
@@ -298,17 +303,19 @@ class Copor_TrueSearch(QThread):
                 if recaptchaFlag == True:
                     self.logcallback.emit("### Recaptcha Solving Now..................", 34)
                     self.solver.solve_captcha_for_url(driver1, driver1.current_url)
-                    driver.find_element_by_xpath('//button').click()
+                    self.driver.find_element_by_xpath('//button').click()
                     self.logcallback.emit("### Recaptcha Solved.......................", 36)
 
-                ownerXpaths = driver1.find_elements_by_xpath("//div[contains(@class, 'card-summary')]//div[@class='h4']")
+                ownerXpaths = driver1.find_elements_by_xpath(
+                    "//div[contains(@class, 'card-summary')]//div[@class='h4']")
 
-                viewButtons = driver1.find_elements_by_xpath("//div[contains(@class, 'card-summary')]//div[contains(@class, 'align-self-center')]/a")
+                viewButtons = driver1.find_elements_by_xpath(
+                    "//div[contains(@class, 'card-summary')]//div[contains(@class, 'align-self-center')]/a")
 
                 for ownerXpath, viewButton in zip(ownerXpaths, viewButtons):
                     self._check_task_paused()
                     ownerName = ownerXpath.text
-                    
+
                     flag = self.destinction(ownerName.lower(), self.data["name"].lower())
 
                     if flag == 2:
@@ -353,50 +360,58 @@ class Copor_TrueSearch(QThread):
             driver2.find_element_by_xpath('//button').click()
             self.logcallback.emit("### Recaptcha Solved.......................", 44)
 
-        phone_data ={
-            "phone1" : "",
-            "phone2" : "",
-            "phone3" : "",
-            "phone4" : "",
-            "phone5" : "",
-            "phone6" : "",
-            "phone7" : "",
-            "phone8" : "",
-            "phone9" : "",
-            "phone10" : ""
+        phone_data = {
+            "phone1": "",
+            "phone2": "",
+            "phone3": "",
+            "phone4": "",
+            "phone5": "",
+            "phone6": "",
+            "phone7": "",
+            "phone8": "",
+            "phone9": "",
+            "phone10": ""
         }
 
         email_data = {
-            "email1" : "",
-            "email2" : "",
-            "email3" : "",
-            "email4" : "",
-            "email5" : "",
-            "email6" : "",
-            "email7" : "",
-            "email8" : "",
-            "email9" : "",
-            "email10" : "",
+            "email1": "",
+            "email2": "",
+            "email3": "",
+            "email4": "",
+            "email5": "",
+            "email6": "",
+            "email7": "",
+            "email8": "",
+            "email9": "",
+            "email10": "",
         }
 
         with open(self.dirName + "/" + "{}.csv".format(self.keyword), "a", newline="", encoding='utf-8') as f:
             writer = csv.writer(f)
             self.logcallback.emit("### Open  {}.csv File...............".format(self.keyword), 45)
-            
+
             phones = re.findall(r'[(][\d]{3}[)][ ]?[\d]{3}-[\d]{4}', driver2.page_source)
             emails = re.findall(r'[\w\.-]+@[\w\.-]+', driver2.page_source)
-            
+
             for phone in range(1, len(phones) + 1):
                 phone_data["phone{}".format(phone)] = phones[phone - 1]
-                
+
             for email in range(1, len(emails) + 1):
                 if 'truepeople' not in emails[email - 1]:
                     email_data["email{}".format(email)] = emails[email - 1]
-                
-            writer.writerow([self.data["company_name"], self.data["name"], self.data["role"], self.data["address"], self.data["age"], self.data["filling_type"], self.data["status"], self.data["state"], self.data["foreign_state"], self.data["county"], self.data["state_id"], self.data["date_filed"], self.data["dos_process"], phone_data["phone1"], phone_data["phone2"], phone_data["phone3"], phone_data["phone4"], phone_data["phone5"], phone_data["phone6"], phone_data["phone7"], phone_data["phone8"], phone_data["phone9"], phone_data["phone10"], email_data["email1"], email_data["email2"], email_data["email3"], email_data["email4"], email_data["email5"], email_data["email6"], email_data["email7"], email_data["email8"], email_data["email9"], email_data["email10"]])
+
+            writer.writerow([self.data["company_name"], self.data["name"], self.data["role"], self.data["address"],
+                             self.data["age"], self.data["filling_type"], self.data["status"], self.data["state"],
+                             self.data["foreign_state"], self.data["county"], self.data["state_id"],
+                             self.data["date_filed"], self.data["dos_process"], phone_data["phone1"],
+                             phone_data["phone2"], phone_data["phone3"], phone_data["phone4"], phone_data["phone5"],
+                             phone_data["phone6"], phone_data["phone7"], phone_data["phone8"], phone_data["phone9"],
+                             phone_data["phone10"], email_data["email1"], email_data["email2"], email_data["email3"],
+                             email_data["email4"], email_data["email5"], email_data["email6"], email_data["email7"],
+                             email_data["email8"], email_data["email9"], email_data["email10"]])
 
         self.logcallback.emit("*****************************End*******************************", 100)
-    
+
     def parse_ownerfind(self, htmlstring, driver3, driver2, original_ownerName):
         try:
             recaptcha = driver3.find_element_by_class_name("g-recaptcha")
@@ -409,14 +424,14 @@ class Copor_TrueSearch(QThread):
             self.solver.solve_captcha_for_url(driver3, driver3.current_url)
             driver3.find_element_by_xpath('//button').click()
             print('Stage2 done')
-        
+
         infos = driver3.find_elements_by_xpath("//a[contains(@class, 'link-to-more') and contains(@class, 'olnk')]")
 
         for info in infos:
             relName = info.text
             rel_array = (relName.lower()).split(" ")
             ori_arry = (original_ownerName.lower()).split(" ")
-            
+
             common = list(set(rel_array).intersection(ori_arry))
             if len(common) == 2:
                 owner_url = info.get_attribute("href")
@@ -428,42 +443,44 @@ class Copor_TrueSearch(QThread):
                     totals = int((itemsInfo.split(" "))[0])
                     page_counts = math.ceil(totals / 11)
                     print("Total Items Accounts  2----------------------> : ", page_counts)
-                
+
                     for page in range(1, page_counts + 1):
                         if page != 1:
-                            driver1.get((owner_url + "&page={}").format(page))
+                            self.driver1.get((owner_url + "&page={}").format(page))
                             time.sleep(2)
-                    
-                        ownerXpaths = driver3.find_elements_by_xpath("//div[contains(@class, 'card-summary')]//div[@class='h4']")
-                        
-                        viewButtons = driver3.find_elements_by_xpath("//div[contains(@class, 'card-summary')]//div[contains(@class, 'align-self-center')]/a")
-                        
+
+                        ownerXpaths = driver3.find_elements_by_xpath(
+                            "//div[contains(@class, 'card-summary')]//div[@class='h4']")
+
+                        viewButtons = driver3.find_elements_by_xpath(
+                            "//div[contains(@class, 'card-summary')]//div[contains(@class, 'align-self-center')]/a")
+
                         for ownerXpath, viewButton in zip(ownerXpaths, viewButtons):
                             ownerName = ownerXpath.text
                             # print(ownerName)
-                            flag = destinction(ownerName.lower(), original_ownerName.lower())
-                            
+                            flag = self.destinction(ownerName.lower(), original_ownerName.lower())
+
                             if flag == 2:
                                 second_url = viewButton.get_attribute('href')
                                 driver2.get(second_url)
-                                parse_owner(driver2.page_source, driver2)
+                                self.parse_owner(driver2.page_source, driver2)
                                 break
                 except:
                     driver2.get(owner_url)
                     self.parse_owner(driver2.page_source, driver2)
-                        
+
                 break
 
+    @staticmethod
+    def destinction(ownerName, original_Name):
 
-    def destinction(self, ownerName, original_Name):
-    
         print("OwnerName-----------> : ", ownerName)
         print("Original_Name-------> : ", original_Name)
         owner_array = ownerName.split(" ")
         original_array = original_Name.split(" ")
 
         common = list(set(owner_array).intersection(original_array))
-        
+
         if len(common) >= 2:
             return 2
         elif len(common) == 1 and len(common[0]) != 1:
@@ -474,7 +491,7 @@ class Copor_TrueSearch(QThread):
     def run(self):
         try:
             self.parse_page()
-            
+
             self.driver.close()
             self.driver.quit()
             self.driver1.close()
@@ -483,7 +500,8 @@ class Copor_TrueSearch(QThread):
             self.driver2.quit()
             self.driver3.close()
             self.driver3.quit()
-            
+
         except Exception as e:
-            if self.driver is not None:
-                raise e
+            pass
+            # if self.driver is not None:
+            #     raise e
